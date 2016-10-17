@@ -183,13 +183,23 @@ body {
 	background-color: #303;	
   }
 }
-@media (min-width: 0px) and (max-width: 700px) {
+@media (min-width: 500px) and (max-width: 700px) {
   body{	
 	height: 100%;
 	background: url("/img/cm-5000-final-tiny.png"); 
     background-repeat: no-repeat;
     background-attachment: fixed;
     background-position: 300px 30%;
+	background-color: #303;	
+  }
+}
+@media (min-width: 0px) and (max-width: 500px) {
+  body{	
+	height: 100%;
+	background: url("/img/cm-5000-final-tiny.png"); 
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: 150px 30%;
 	background-color: #303;	
   }
 }
