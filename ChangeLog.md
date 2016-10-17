@@ -1,5 +1,5 @@
-# Change Log
+## Change Log
 All notable changes to this project will be documented in this file.
 
-## Initial Release [1.0]
+#### Initial Release [1.0]
 
