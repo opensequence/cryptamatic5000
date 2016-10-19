@@ -101,7 +101,9 @@
 	        setRandomPasswordandEncrypt();
 
 	        //function call back (to make sure that the get succeeds before trying to encrypt
-
+			//basic click tracking 
+			$('track_click').attr('src','https://s3-us-west-2.amazonaws.com/cryptamatic-clicktrack/enc-click.gif');
+			
 	        $('#encrypt-button, #loading').hide();
 	        $('#text').height('160px');
 	        $('#loading').show();
@@ -116,7 +118,9 @@
 	        $('#decrypt-button, #loading').hide();
 	        $('#text').height('160px');
 	        $('#loading').show();
-	        triplesec.decrypt({
+			//basic click tracking 
+			$('track_click').attr('src','https://s3-us-west-2.amazonaws.com/cryptamatic-clicktrack/dec-click.gif');
+			triplesec.decrypt({
 
 	            data: new triplesec.Buffer($('#text').val(), "hex"),
 	            key: new triplesec.Buffer($('#key').val()),
