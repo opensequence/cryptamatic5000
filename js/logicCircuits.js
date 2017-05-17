@@ -1,6 +1,7 @@
 	$().ready(function() {
 	    // Retreive URL Hash data
-
+		var logicCircuitVersion = "2.1"
+		$('#LCVersion').html(logicCircuitVersion);
 	    var rootUrl = "https://cryptamatic.com"
 	    var decryptUrlBits = "#d/"
 		var decryptUrlBitsMail = "%23d/"
@@ -9,15 +10,35 @@
 	    var mode = splitHashTag[0]
 	    var payload = splitHashTag[1]
 	    var clipboard = new Clipboard('.clipboard-btn');
+		var decryptedJSON = ""
+		var JSONversion = "1"
+		var decryptedBase64File =""
+		var fileSizeLimitBytes = "10000000"
 	    //alert(hashTag);
 	    //alert(mode);
 	    //define functions
 
 	    function EncryptTheStuff() {
-	        triplesec.encrypt({
+	        
+			//Assemble JSON file
+			var JSONtemplate = '{"version": "","message": "","fileAttached": "","fileName": "","fileSize": "","fileDate": "","fileType": "","base64File": ""}';
+			var assembledJSON = JSON.parse(JSONtemplate);
+			assembledJSON.version = JSONversion
+			assembledJSON.message = $('#text').val()
+			//if fileName exists, set file Attached to true
+			if (fileName){assembledJSON.fileAttached = "true"}
+			assembledJSON.fileName = fileName
+			assembledJSON.fileSize = fileSize
+			assembledJSON.fileDate = fileDate
+			assembledJSON.fileType = fileType
+			assembledJSON.base64File = Base64File
+			
+			
+			triplesec.encrypt({
 
-	            data: new triplesec.Buffer($('#text').val()),
-	            key: new triplesec.Buffer($('#key').val()),
+	            //data: new triplesec.Buffer($('#text').val()),
+	            data: new triplesec.Buffer(JSON.stringify(assembledJSON)),
+				key: new triplesec.Buffer($('#key').val()),
 	            progress_hook: function(obj) {
 
 	            }
@@ -26,13 +47,17 @@
 
 	            if (!err) {
 	                var ciphertext = buff.toString('hex');
-	                //Create the nice shareable URL
-	                var assembleShareLink = rootUrl.concat(decryptUrlBits);
-	                var shareLink = assembleShareLink.concat(ciphertext);
+	                //Create the nice shareable URL if there is no file attached.
+					if (!fileName){
+						var assembleShareLink = rootUrl.concat(decryptUrlBits);
+						var shareLink = assembleShareLink.concat(ciphertext);
+						$('#text').val(shareLink);
+					}else {
+						$('#text').val(ciphertext);
+					}
 					var outputPassword = $('#key').val();
-	                $('#text').val(shareLink);
 	                //$('#loading').html('ALL DONE!');
-	                $('#loading').html('<i class="fa fa-check fa-3x fa-fw" aria-hidden="true"></i>');
+	                $('#loading').html('<i class="fa fa-check fa-3x fa-fw" aria-hidden="true"></i><p>Done! </p>');
 					$('#encryption-output-div').show();
 	                $('#output-password').html(outputPassword);
 					$('#output-title').show();
@@ -58,7 +83,74 @@
 
 	        });
 	    }
+		//NEW BIT ATTACH FILE
+		var fileSize = ""
+		var fileName = ""
+		var fileDate = ""
+		var fileType = ""
+		var Base64File = ""
+		//select file function
+		var handleFileSelect = function(evt) {
+		var files = evt.target.files;
+		var file = files[0];
+		var fileTooLarge = "false"
+		
+		
+		//output file metadata
+		var output = [];
+		for (var i = 0, f; f = files[i]; i++) {
+			//output to list on screen
+			if(f.size <= fileSizeLimitBytes){
+			output.push('<i class="fa fa-paperclip fa-2x fa-fw" aria-hidden="true"></i><strong>', escape(f.name), '</strong> (', f.type || 'n/a', ') - ',
+            f.size, ' bytes, last modified: ',
+            f.lastModifiedDate,
+            '');
+			//assign to variables for later use
+			fileSize = f.size
+			fileName = escape(f.name)
+			fileDate = f.lastModifiedDate
+			fileType = f.type
+			}else {
+			alert('Only files below ' + fileSizeLimitBytes + 'bytes are allowed.');
+			fileTooLarge = "true"
+			}
+		}
+		document.getElementById('list').innerHTML = '<ul>' + output.join('') + '</ul>';
+ 
+		if (fileTooLarge == "false"){
+		// Convert file to base64
+			if (files && file) {
+				var reader = new FileReader();
 
+				reader.onload = function(readerEvt) {
+				$('#loading').show();
+				var binaryString = readerEvt.target.result;
+				Base64File = btoa(binaryString);
+				$('#loading').hide();
+				//document.getElementById("base64textarea").value = Base64File
+				
+			};
+
+        reader.readAsBinaryString(file);
+			}
+		}
+		};
+
+		if (window.File && window.FileReader && window.FileList && window.Blob) {
+			document.getElementById('filePicker').addEventListener('change', handleFileSelect, false);
+		} else {
+			alert('The File APIs are not fully supported in this browser.');
+		}
+		//download button
+	    $('#download-button').on('click', function() {
+			var binary = atob(decryptedBase64File)
+			var array = new Uint8Array(binary.length)
+			for( var i = 0; i < binary.length; i++ ) { array[i] = binary.charCodeAt(i) }			
+			download(new Blob([array]), fileName, fileType);
+	    });
+		
+		
+  //END NEW BIT ATTACH FILE
 	    function setRandomPasswordandEncrypt(passwordOptionBool) {
 	        if (!$("#AutogenPasswordOptionsBool").prop('checked')) { //if bool is false dont autogen password stuff
 	            EncryptTheStuff();
@@ -107,7 +199,9 @@
 	        $('#encrypt-button, #loading').hide();
 	        $('#text').height('160px');
 	        $('#loading').show();
+			$('#attachfile-button-div').hide();
 			$('#OptionsModalLink').hide();
+			$('#filePicker').hide();
 
 	        // Start encryption
 
@@ -129,10 +223,42 @@
 	        }, function(err, buff) {
 
 	            if (!err) {
-	                $('#text').val(buff.toString());
-	                $('#loading').html('<i class="fa fa-check fa-3x fa-fw" aria-hidden="true"></i>');
-					$('#clipboarddecrypted').show();
-	                $('#password-row').hide();
+	                //UNUSED NOW $('#text').val(buff.toString());
+					//Put decrypted JSON into variable
+					try {decryptedJSON = JSON.parse((buff.toString()));}
+					catch (err){}
+					//Check for JSON version - if doesnt exists, set variable to legacy (which will match an if statement)
+					var decryptionVersion = ""
+					decryptionVersion = decryptedJSON.version 					
+					if (!decryptionVersion){decryptionVersion = "legacy"}
+					//legacy decryption code
+					if (decryptionVersion == "legacy"){
+						$('#text').val(buff.toString());
+						$('#loading').html('<i class="fa fa-check fa-3x fa-fw" aria-hidden="true"></i><p>Done! </p>');
+						$('#clipboarddecrypted').show();
+						$('#password-row').hide();
+					}
+					//run version 1 decryption code
+					if (decryptionVersion == "1") {
+						$('#text').val(decryptedJSON.message);
+						//If file was attached do this
+						if (decryptedJSON.fileAttached == "true"){
+						decryptedBase64File = decryptedJSON.base64File
+						$('#download-button').show();
+						fileName = decryptedJSON.fileName
+						fileType = decryptedJSON.fileType
+						fileSize = decryptedJSON.fileSize
+						fileDate = decryptedJSON.fileDate
+						$('#list').html('<i class="fa fa-paperclip fa-2x fa-fw" aria-hidden="true"></i><strong>' + fileName +' </strong> ' + fileType + ' -  ' + fileSize + ' bytes, last modified: ' + fileDate + '');
+						$('#list').show();
+						}
+						$('#loading').html('<i class="fa fa-check fa-3x fa-fw" aria-hidden="true"></i><p>Done! </p>');
+						$('#clipboarddecrypted').show();
+						$('#password-row').hide();
+					
+					}
+
+					
 					
 	            } else {
 	                alert('Your message could not be decrypted. Check your password.');
@@ -150,6 +276,8 @@
 	        $('#encrypt-view').hide();
 	        $('#decrypt-view').show();
 	        $('#OptionsModalLink').show();
+			$('#filePicker').show();
+			$('#list').show();
 	        var a = document.getElementById("key");
 	        a.value = a.defaultValue;
 	    });
@@ -163,6 +291,9 @@
 	        $('#decrypt-view').hide();
 	        $('#OptionsModalLink').hide();
 	        $('#key').show();
+			$('#filePicker').hide();
+			$('#attachfile-button-div').hide();
+			$('#list').hide();
 	        var a = document.getElementById("key");
 	        a.value = a.defaultValue;
 	    });
@@ -174,10 +305,16 @@
 	        $('#encrypt-view').show();
 	        $('#key').show();
 	        $('#OptionsModalLink').hide();
+			$('#attachfile-button-div').hide();
+			$('#filePicker').hide();
+			$('#list').hide();
 	    } else {
 	        $('#decrypt-button-div').hide();
 	        $('#encrypt-button-div').show();
+			$('#attachfile-button-div').show();
 	        $('#decrypt-view').show();
+			$('#filePicker').show();
+			$('#list').show();
 
 	    }
 
