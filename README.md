@@ -9,5 +9,6 @@ Other JS components used:
 <p><a href="https://getbootstrap.com" target="_blank">twitter bootstrap</a></p>
 <p><a href="https://clipboardjs.com" target="_blank">clipboard.js</a></p>
 <p><a href="https://github.com/Data-ptr/jQuery.NatoCallout" target="_blank">jquery.NatoCallout</a></p>
+<p><a href="http://danml.com/download.html" target="_blank">download.js</a></p>
 </p>
 
